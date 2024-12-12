@@ -1,0 +1,138 @@
+plugins {
+	id 'org.springframework.boot' version '2.7.0'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id 'java'
+}
+
+group = 'com.ejemplo'
+version = '1.0.0'
+sourceCompatibility = '17'
+
+repositories {
+	mavenCentral()
+}
+
+// Crear una nueva configuración para JAXB
+configurations {
+	jaxb
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web-services'
+	implementation 'wsdl4j:wsdl4j'
+	implementation 'javax.xml.bind:jaxb-api:2.3.1'
+	implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.1'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	//test
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.junit.jupiter:junit-jupiter-api'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+	testImplementation 'org.mockito:mockito-core:4.0.0'
+	testImplementation 'org.mockito:mockito-junit-jupiter:4.0.0'
+
+	//cucummber
+	testImplementation 'io.cucumber:cucumber-java:7.0.0'
+	//testImplementation 'io.cucumber:cucumber-spring:7.0.0'
+	implementation group: 'io.cucumber', name: 'cucumber-picocontainer', version: '7.20.1'
+	testImplementation 'io.cucumber:cucumber-junit:7.0.0'
+	testImplementation group: 'org.junit.platform', name: 'junit-platform-suite', version: '1.9.1'
+
+
+
+	// Agregar dependencias específicas para la generación de JAXB
+	jaxb 'org.glassfish.jaxb:jaxb-xjc:2.3.1'
+	jaxb 'org.glassfish.jaxb:jaxb-runtime:2.3.1'
+	jaxb 'javax.xml.bind:jaxb-api:2.3.1'
+	//json
+	implementation group: 'com.jayway.jsonpath', name: 'json-path', version: '2.9.0'
+	//database
+	implementation 'com.h2database:h2'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+
+
+}
+
+task genJaxb {
+	ext.sourcesDir = "${buildDir}/generated-sources/jaxb"
+	ext.schema = "src/main/resources/schemas/pokemon-service.xsd"
+	ext.classesDir = "${buildDir}/classes/jaxb"
+
+	outputs.dir classesDir
+
+	doLast {
+		project.ant {
+			taskdef name: "xjc",
+					classname: "com.sun.tools.xjc.XJCTask",
+					classpath: configurations.jaxb.asPath
+			mkdir(dir: sourcesDir)
+			mkdir(dir: classesDir)
+
+			xjc(destdir: sourcesDir,
+					schema: schema,
+					package: "com.bancaya.pokemon") {
+				arg(value: "-wsdl")
+				produces(dir: sourcesDir, includes: "**/*.java")
+			}
+
+			javac(destdir: classesDir,
+					source: '17',
+					target: '17',
+					debug: true,
+					debugLevel: "lines,vars,source",
+					classpath: configurations.jaxb.asPath) {
+				src(path: sourcesDir)
+				include(name: "**/*.java")
+				include(name: "*.java")
+			}
+
+			copy(todir: classesDir) {
+				fileset(dir: sourcesDir, erroronmissingdir: false) {
+					exclude(name: "**/*.java")
+				}
+			}
+		}
+	}
+}
+
+// Agregar el directorio generado como fuente de Java
+sourceSets {
+	main {
+		java {
+			srcDir "${buildDir}/generated-sources/jaxb"
+		}
+	}
+}
+
+
+sourceSets {
+	test {
+		java {
+			srcDirs = ['src/test/java']
+		}
+		resources {
+			srcDirs = ['src/test/resources']
+		}
+	}
+}
+
+tasks.test {
+	useJUnitPlatform()
+	testLogging {
+		events "PASSED", "FAILED", "SKIPPED"
+		exceptionFormat "full"
+		showCauses true
+		showExceptions true
+		showStackTraces true
+	}
+
+	//maxParallelForks = 2
+
+
+	include '**/*Test.class'
+	include '**/*Steps.class'
+	exclude '**/Integration/**'  // Excluir pruebas de integración
+}
+
+compileJava.dependsOn genJaxb
