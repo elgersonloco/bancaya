@@ -24,11 +24,19 @@ dependencies {
 	implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.1'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 
+	//test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.junit.jupiter:junit-jupiter-api'
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 	testImplementation 'org.mockito:mockito-core:4.0.0'
 	testImplementation 'org.mockito:mockito-junit-jupiter:4.0.0'
+
+	//cucummber
+	testImplementation 'io.cucumber:cucumber-java:7.0.0'
+	//testImplementation 'io.cucumber:cucumber-spring:7.0.0'
+	implementation group: 'io.cucumber', name: 'cucumber-picocontainer', version: '7.20.1'
+	testImplementation 'io.cucumber:cucumber-junit:7.0.0'
+	testImplementation group: 'org.junit.platform', name: 'junit-platform-suite', version: '1.9.1'
 
 
 
@@ -98,6 +106,17 @@ sourceSets {
 }
 
 
+sourceSets {
+	test {
+		java {
+			srcDirs = ['src/test/java']
+		}
+		resources {
+			srcDirs = ['src/test/resources']
+		}
+	}
+}
+
 tasks.test {
 	useJUnitPlatform()
 	testLogging {
@@ -111,8 +130,9 @@ tasks.test {
 	//maxParallelForks = 2
 
 
-	include '**/*Test.class'      // Solo clases que terminan en "Test"
-	exclude '**/integration/**'  // Excluir pruebas de integración
+	include '**/*Test.class'
+	include '**/*Steps.class'
+	exclude '**/Integration/**'  // Excluir pruebas de integración
 }
 
 compileJava.dependsOn genJaxb
